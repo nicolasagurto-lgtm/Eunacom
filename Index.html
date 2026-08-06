@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi EUNACOM Pro v6.5 - Botón de Inicio Rápido</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn { animation: fadeIn 0.2s ease-out forwards; }
+        
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+    <div id="app" class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Renderizado dinámico vía JavaScript -->
+    </div>
+
+    <script>
+        const specialtyLabels = {
+            ginecologia_obstetricia: "Ginecología y Obstetricia",
+            pediatria: "Pediatría",
+            neonatologia: "Neonatología",
+            infectologia_infantil: "Infectología Infantil",
+            medicina_interna: "Medicina Interna",
+            cardiologia: "Cardiología",
+            medicina_respiratoria: "Medicina Respiratoria",
+            gastroenterologia: "Gastroenterología",
+            nefrologia_urologia: "Nefrología y Urología",
+            endocrinologia_diabetes: "Endocrinología y Diabetes",
+            enfermedades_infecciosas: "Enfermedades Infecciosas",
+            hematologia_oncologia: "Hematología y Oncología",
+            reumatologia: "Reumatología",
+            neurologia: "Neurología",
+            cirugia_general: "Cirugía General",
+            cirugia_digestiva: "Cirugía Digestiva",
+            traumatologia: "Traumatología",
+            urologia_quirurgica: "Urología Quirúrgica",
+            cirugia_vascular: "Cirugía Vascular",
+            cirugia_torax: "Cirugía de Tórax",
+            psiquiatria: "Psiquiatría",
+            salud_publica: "Salud Pública y Gestión",
+            oftalmologia: "Oftalmología",
+            otorrinolaringologia: "Otorrinolaringología",
+            dermatologia: "Dermatología"
+        };
+
+        const medicalRanks = [
+            { minLevel: 1, maxLevel: 5, name: "Estudiante de Medicina" },
+            { minLevel: 6, maxLevel: 10, name: "Interno de Medicina" },
+            { minLevel: 11, maxLevel: 15, name: "Médico General / MGZ" },
+            { minLevel: 16, maxLevel: 20, name: "Residente / Becado" },
+            { minLevel: 21, maxLevel: 25, name: "Médico Especialista" },
+            { minLevel: 26, maxLevel: 30, name: "Subespecialista" },
+            { minLevel: 31, maxLevel: 35, name: "Jefe de Servicio" },
+            { minLevel: 36, maxLevel: 40, name: "Profesor de Medicina" },
+            { minLevel: 41, maxLevel: 45, name: "Director Médico" },
+            { minLevel: 46, maxLevel: 50, name: "Eminencia EUNACOM" }
+        ];
+
+        const avatarEmojis = ["👨‍⚕️", "👩‍⚕️", "🩺", "💉", "🏥", "🧬", "🧠", "❤️", "🔬", "💊", "⭐", "🦄"];
+
+        function getXPForNextLevel(level) {
+            return 200 + (level - 1) * 100;
+        }
+
+        function getLevelData(totalXP) {
+            let currentLevel = 1;
+            let xpAcc = totalXP;
+            
+            while (currentLevel < 50) {
+                let xpNeededForNext = getXPForNextLevel(currentLevel);
+                if (xpAcc >= xpNeededForNext) {
+                    xpAcc -= xpNeededForNext;
+                    currentLevel++;
+                } else {
+                    break;
+                }
+            }
+
+            let xpForNextLevel = currentLevel < 50 ? getXPForNextLevel(currentLevel) : 0;
+            let rankObj = medicalRanks.find(r => currentLevel >= r.minLevel && currentLevel <= r.maxLevel) || medicalRanks[medicalRanks.length - 1];
+
+            let pct = currentLevel < 50 ? Math.min(100, Math.round((xpAcc / xpForNextLevel) * 100)) : 100;
+            let xpNeeded = currentLevel < 50 ? (xpForNextLevel - xpAcc) : 0;
+
+            return {
+                level: currentLevel,
+                rankName: rankObj.name,
+                currentLevelXP: xpAcc,
+                totalLevelXP: xpForNextLevel,
+                xpNeeded: xpNeeded,
+                pct: pct
+            };
+        }
+
+        function checkAndUpdateStreak() {
+            const today = new Date().toISOString().split('T')[0];
+            const lastActive = localStorage.getItem("eunacom_pro_last_active_date");
+            let streak = parseInt(localStorage.getItem("eunacom_pro_streak") || "1");
+
+            if (!lastActive) {
+                localStorage.setItem("eunacom_pro_last_active_date", today);
+                localStorage.setItem("eunacom_pro_streak", "1");
+                return 1;
+            }
+
+            if (lastActive === today) {
+                return streak;
+            }
+
+            const lastDate = new Date(lastActive);
+            const currentDate = new Date(today);
+            const diffTime = Math.abs(currentDate - lastDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) {
+                streak += 1;
+                localStorage.setItem("eunacom_pro_streak", streak.toString());
+                localStorage.setItem("eunacom_pro_last_active_date", today);
+            } else if (diffDays > 1) {
+                streak = 1;
+                localStorage.setItem("eunacom_pro_streak", "1");
+                localStorage.setItem("eunacom_pro_last_active_date", today);
+            }
+            return streak;
+        }
+
+        const minsalGuidesList = [
+            { id: "01", title: "CÓDIGO IAM Protocolo para Servicios de Urgencia", category: "cardiologia" },
+            { id: "02", title: "Hipertensión arterial primaria personas de 15 años y más 2018", category: "cardiologia" },
+            { id: "03", title: "Hipotiroidismo personas de 15 años y más", category: "endocrinologia_diabetes" },
+            { id: "04", title: "TBC - Norma técnica 2022", category: "medicina_respiratoria" },
+            { id: "05", title: "Nódulo tiroideo y cáncer diferenciado de tiroides 2013", category: "endocrinologia_diabetes" },
+            { id: "06", title: "Cáncer de mama 2015 y actualizaciones 2023", category: "ginecologia_obstetricia" },
+            { id: "07", title: "Cáncer cervicouterino 2015 y actualizaciones 2019", category: "ginecologia_obstetricia" },
+            { id: "08", title: "Retinopatía diabética 2010 y actualización 2017", category: "oftalmologia" },
+            { id: "09", title: "Tratamiento y manejo de la infección por H. pylori - 2020", category: "gastroenterologia" },
+            { id: "10", title: "Guía ESC 2023 sobre Síndrome Coronario Agudo", category: "cardiologia" },
+            { id: "11", title: "Guía practica clínica - Alzheimer y otras demencias 2023", category: "neurologia" },
+            { id: "12", title: "GPC-Accidente-Cerebro-Vascular-Isquemico-2013", category: "neurologia" },
+            { id: "13", title: "GPC-Parkinson-2010", category: "neurologia" },
+            { id: "14", title: "Guía clínica manejo HSA - Revista chilena neurología 2017", category: "neurologia" },
+            { id: "15", title: "Guía GES - Depresión (2013)", category: "psiquiatria" },
+            { id: "16", title: "Guía GES - Trastorno Bipolar (2013)", category: "psiquiatria" },
+            { id: "17", title: "Guía clínica para el tratamiento de esquizofrenia (2019)", category: "psiquiatria" },
+            { id: "18", title: "Orientación técnica cuidados paliativos universales (2022)", category: "salud_publica" }
+        ];
+
+        const defaultFlashcardsDatabase = {
+            "01": [
+                {
+                    front: "¿Cuál es la conducta inmediata en un paciente con dolor torácico opresivo de 45 min y supradesnivel del ST en SDD (DII, DIII, aVF)?",
+                    back: "Carga de Aspirina 300 mg + Clopidogrel 300-600 mg + Activar Código IAM para Angioplastia Primaria (< 120 min) o Fibrinolisis (< 30 min si no hay hemodinamia).",
+                    pearl: "📌 Tiempo es miocardio: Si la Angioplastia tarda más de 120 minutos desde el primer contacto médico, realizar trombolisis inmediata."
+                },
+                {
+                    front: "¿Contraindicaciones absolutas para la administración de trombolíticos en IAMSDST?",
+                    back: "Antecedente de ACV hemorrágico previo (en cualquier momento), ACV isquémico en los últimos 6 meses, neoplasia o malformación vascular cerebral conocida, sangrado digestivo activo en el último mes.",
+                    pearl: "📌 Siempre descartar disección aórtica (soplos de insuficiencia aórtica, pulsos asimétricos) antes de trombolizar."
+                }
+            ],
+            "04": [
+                {
+                    front: "¿Cuál es la definición estandarizada de Sintomático Respiratorio en Chile según la Norma TBC 2022?",
+                    back: "Toda persona que presenta tos con expectoración por más de 15 días. En ellos es obligatorio solicitar 2 muestras de Baciloscopía de esputo.",
+                    pearl: "📌 La baciloscopía de esputo es gratuita para todo habitante del territorio nacional, independiente de su previsión."
+                },
+                {
+                    front: "Esquema de tratamiento primario de TBC pulmonar sensible en Chile:",
+                    back: "Fase diaria (2 meses, 50 dosis): Isoniacida + Rifampicina + Pirazinamida + Etambutol (HRZE). Fase bisemanal (4 meses, 32 dosis): Isoniacida + Rifampicina (HR).",
+                    pearl: "📌 Ante elevación de transaminasas > 5 veces el valor normal, suspender temporalmente el tratamiento por hepatotoxicidad."
+                }
+            ]
+        };
+
+        const defaultRoscoItems = [
+            {
+                letter: "A",
+                type: "COMIENZA CON LA LETRA A",
+                prompt: "Pérdida anormal del cabello que puede ser focal o difusa, cicatricial o no cicatricial, por causas genéticas, hormonales o autoinmunes.",
+                options: ["Alopecia", "Acné rosácea", "Anemia ferropénica", "Anafilaxia"],
+                correctAnswer: "Alopecia",
+                justification: "La alopecia se clasifica en no cicatricial (androcinética, areata) y cicatricial. En alopecia areata el tratamiento inicial incluye corticoides tópicos o intralesionales.",
+                pearl: "📌 Alopecia areata en placas: Corticoides tópicos de alta potencia o intralesionales como primera línea.",
+                specialty: "dermatologia"
+            },
+            {
+                letter: "B",
+                type: "COMIENZA CON LA LETRA B",
+                prompt: "Infección respiratoria viral aguda del tracto inferior caracterizada por sibilancias y taquipnea en lactantes menores de 2 años.",
+                options: ["Bronquiolitis", "Bronquitis obstructiva", "Broncoespasmo severo", "Beriliosis"],
+                correctAnswer: "Bronquiolitis",
+                justification: "Causada principalmente por el Virus Sincicial Respiratorio (VSR). El pilar del tratamiento es el soporte hidroaéreo y kinesiología no rutinaria. No se indican broncodilatadores de rutina.",
+                pearl: "📌 Bronquiolitis por VSR: Aseo nasal + hidratación + KNT en atelectasias. El salbutamol no ha demostrado eficacia clínica.",
+                specialty: "pediatria"
+            }
+        ];
+
+        const diagMinutoFallback = [
+            {
+                id: "diag_fb_tbc",
+                specialty: "medicina_respiratoria",
+                mainPrompt: "Mujer de 28 años consulta por tos con expectoración de 6 semanas de evolución.",
+                pistas: {
+                    pista1: "Trabajadora de hogar de ancianos, vacunación BCG al nacer, sin patologías previas, no fumadora, niega consumo de alcohol o drogas.",
+                    pista2: "Tos productiva de 6 semanas, inicialmente seca luego con expectoración mucopurulenta, ocasionalmente hemoptoica. Sudoración nocturna profusa, baja de peso 4 kg, fiebre vespertina 38°C.",
+                    pista3: "T° 37.8°C, FC 92 lpm, PA 110/70 mmHg, IMC 18.5 kg/m². Crepitaciones en campo superior derecho, matidez apical derecha.",
+                    pista4: "VHS 68 mm/h, PCR 45 mg/L, hemoglobina 11.2 g/dL, leucocitos 8.500/mm³, baciloscopía esputo (+++) BAAR.",
+                    pista5: "Rx tórax con infiltrado cavitado en lóbulo superior derecho, adenopatías hiliares ipsilaterales, tractos fibróticos apicales bilaterales."
+                },
+                correctDiagnosis: "Tuberculosis Pulmonar",
+                keyInfo: [
+                    "-Epidemiología: Chile incidencia 14/100.000 habitantes, más frecuente en inmunosustituidos, hacinamiento, personal de salud.",
+                    "-Síntomas cardinales: Tos >2 semanas + expectoración + baja de peso + sudoración nocturna + fiebre vespertina.",
+                    "-Diagnóstico: Baciloscopía 2 muestras (sensibilidad 60-70%), cultivo de Koch gold standard (6-8 semanas), GeneXpert MTB/RIF resultado in 2 hours.",
+                    "-Tratamiento fase diaria (2 meses): Isoniacida 5 mg/kg + Rifampicina 10 mg/kg + Pirazinamida 25 mg/kg + Etambutol 15 mg/kg.",
+                    "-Tratamiento fase bisemanal (4 meses): Isoniacida + Rifampicina.",
+                    "-Notificación: Obligatoria inmediata, estudio de contactos en 48 horas, quimioprofilaxis con isoniacida 5 mg/kg/día por 6-9 meses en contactos."
+                ]
+            }
+        ];
+
+        const databaseFallback = {
+            ginecologia_obstetricia: [
+                {
+                    id: "obs_fb_1",
+                    area: "Ginecología y Obstetricia",
+                    difficulty: "Alta",
+                    question: "Paciente de 27 años, multigesta de 1, cursando embarazo de 35+2 semanas por ecografía precoz. Consulta por contracciones uterinas dolorosas de 2 horas. Dinámica: 3 en 10 min de 40 seg. Cuello borrado 80%, 3 cm de dilatación, membranas íntegras. RBNE reactivo. ¿Conducta inicial según norma MINSAL?",
+                    options: [
+                        { id: "A", text: "Indicar reposo absoluto e hidratación endovenosa por 2 horas." },
+                        { id: "B", text: "Permitir evolución espontánea del parto al tratarse de un prematuro tardío estable." },
+                        { id: "C", text: "Iniciar tocolisis con Nifedipina y administrar Betametasona 12mg IM." },
+                        { id: "D", text: "Administrar Sulfato de Magnesio EV en esquema de neuroprotección." },
+                        { id: "E", text: "Realizar rotura artificial de membranas (RAM) para acelerar el trabajo de parto." }
+                    ],
+                    correctAnswer: "B",
+                    justification: "A las 35 semanas (prematuro tardío) la tocolisis y maduración pulmonar ya no están indicadas según la norma MINSAL por superar el límite de utilidad (34+6 semanas). Se permite evolución natural.",
+                    distractors: {
+                        A: "Observar sin diagnosticar retarda el manejo adecuado.",
+                        B: "Conducta de elección según norma nacional.",
+                        C: "Nifedipina y Betametasona solo aplican en menores a 35 semanas.",
+                        D: "Neuroprotección con Sulfato de Magnesio es válida bajo las 32 semanas.",
+                        E: "RAM artificial sin indicación aumenta riesgo infectivo."
+                    },
+                    pearl: "¡Límite de Oro en Prematuros!\nTocolisis y Maduración pulmonar: solo hasta las 34+6 semanas.",
+                    reference: "Guía de Prevención de Parto Prematuro, MINSAL."
+                }
+            ]
+        };
+
+        let state = {
+            activeTab: "simulator",
+            view: "dashboard",
+            selectedSpecialty: "",
+            questionCount: 3,
+            questions: [],
+            currentIdx: 0,
+            selectedAnswers: {},
+            submitted: {},
+            score: 0,
+            attempts: JSON.parse(localStorage.getItem("eunacom_pro_v5_attempts") || "[]"),
+            selectedHistoryAttempt: null,
+            isReinforcement: false,
+            
+            // GAMIFICATION, XP, STREAK & AVATAR SYSTEM
+            userXP: parseInt(localStorage.getItem("eunacom_pro_xp") || "0"),
+            streakDays: checkAndUpdateStreak(),
+            userAvatar: localStorage.getItem("eunacom_pro_avatar") || "👨‍⚕️",
+            showAvatarPicker: false,
+            showGamificationModal: false,
+
+            // Selector Modal State
+            showCountModal: false,
+            pendingSpecialty: "",
+
+            // Diagnóstico en 1 Minuto States
+            diagState: "instructions",
+            diagSpecialty: "aleatorio",
+            diagTimerLeft: 60,
+            diagCluesRevealed: { 1: false, 2: false, 3: false, 4: false, 5: false },
+            diagCurrentCase: null,
+            showKeyInfoModal: false,
+            sloganIdx: 0,
+
+            // Flashcards Module States
+            flashcardsState: "home",
+            selectedMinsalGuide: null,
+            currentFlashcards: [],
+            flashcardCurrentIdx: 0,
+            flashcardIsFlipped: false,
+            flashcardKnownCount: 0,
+            flashcardUnknownCount: 0,
+
+            // AI Status
+            isGeneratingAI: false,
+            aiMessage: "",
+            notification: null,
+
+            // MediPalabra Rosco States
+            roscoState: "intro",
+            roscoItems: JSON.parse(localStorage.getItem("eunacom_pro_rosco") || JSON.stringify(defaultRoscoItems.map(i => ({ ...i, status: "pending", userSelected: null })))),
+            roscoCurrentIdx: 0,
+            roscoSpecialtyFilter: "todas"
+        };
+
+        const slogans = [
+            "¡Adivina la respuesta!",
+            "¡Piensa como médico!",
+            "Mantén la mente clara",
+            "Confía en tu criterio clínico"
+        ];
+
+        function showNotification(msg, type = "info") {
+            state.notification = { msg, type };
+            render();
+            setTimeout(() => {
+                state.notification = null;
+                render();
+            }, 4000);
+        }
+
+        function addRewards(xpGained, reason = "") {
+            state.userXP += xpGained;
+            localStorage.setItem("eunacom_pro_xp", state.userXP.toString());
+
+            let rewardMsg = `+${xpGained} XP`;
+            if (reason) rewardMsg += ` (${reason})`;
+
+            showNotification(rewardMsg, "success");
+        }
+
+        function saveAttempts() {
+            localStorage.setItem("eunacom_pro_v5_attempts", JSON.stringify(state.attempts));
+        }
+
+        function saveRoscoState() {
+            localStorage.setItem("eunacom_pro_rosco", JSON.stringify(state.roscoItems));
+        }
+
+        function openCountModal(specialtyKey) {
+            state.pendingSpecialty = specialtyKey;
+            state.showCountModal = true;
+            render();
+        }
+
+        function closeCountModal() {
+            state.showCountModal = false;
+            state.pendingSpecialty = "";
+            render();
+        }
+
+        function stopDiagTimer() {
+            if (window.diagTimerInterval) {
+                clearInterval(window.diagTimerInterval);
+                window.diagTimerInterval = null;
+            }
+        }
+
+        function startDiagTimer() {
+            stopDiagTimer();
+            state.diagTimerLeft = 60;
+            updateTimerUI();
+
+            window.diagTimerInterval = setInterval(() => {
+                if (state.diagTimerLeft > 0 && state.diagState === "playing") {
+                    state.diagTimerLeft--;
+                    updateTimerUI();
+                } else if (state.diagTimerLeft === 0 && state.diagState === "playing") {
+                    stopDiagTimer();
+                    revealDiagAnswer();
+                    showNotification("¡Tiempo agotado! (60 segundos transcurridos)", "warning");
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            const textEl = document.getElementById("timer-text");
+            const barEl = document.getElementById("timer-bar-fill");
+            if (textEl && barEl) {
+                const secs = state.diagTimerLeft;
+                textEl.innerText = `${secs}s`;
+                const pct = (secs / 60) * 100;
+                barEl.style.width = `${pct}%`;
+            }
+        }
+
+        function toggleClue(clueNum) {
+            state.diagCluesRevealed[clueNum] = !state.diagCluesRevealed[clueNum];
+            state.sloganIdx = (state.sloganIdx + 1) % slogans.length;
+            render();
+        }
+
+        function revealDiagAnswer() {
+            stopDiagTimer();
+            state.diagState = "revealed";
+            state.diagCluesRevealed = { 1: true, 2: true, 3: true, 4: true, 5: true };
+            render();
+        }
+
+        function handleDiagUserSelfEval(knewIt) {
+            const cluesUsed = Object.values(state.diagCluesRevealed).filter(Boolean).length;
+            
+            const attempt = {
+                specialty: state.diagSpecialty,
+                score: knewIt ? 1 : 0,
+                totalQuestions: 1,
+                timestamp: Date.now(),
+                answers: { 0: knewIt ? "CORRECT" : "WRONG" },
+                isDiagMinuto: true,
+                questions: [{
+                    id: state.diagCurrentCase.id,
+                    area: specialtyLabels[state.diagCurrentCase.specialty] || "Medicina General",
+                    question: state.diagCurrentCase.mainPrompt,
+                    correctAnswer: state.diagCurrentCase.correctDiagnosis,
+                    justification: state.diagCurrentCase.keyInfo ? state.diagCurrentCase.keyInfo.join("\n") : "Información clave cargada.",
+                    pearl: state.diagCurrentCase.correctDiagnosis
+                }]
+            };
+            state.attempts.unshift(attempt);
+            saveAttempts();
+
+            if (knewIt) {
+                if (cluesUsed === 0) {
+                    addRewards(20, "Diagnóstico correcto sin pistas");
+                } else {
+                    addRewards(10, "Ganar Desafío 1 min");
+                }
+            } else {
+                showNotification("Guardado en historial para repasar en Modo Refuerzo. 📌", "info");
+            }
+
+            startDiagMinutoChallenge(state.diagSpecialty);
+        }
+
+        // ==========================================
+        // ROSCO MEDIPALABRA GAME LOGIC
+        // ==========================================
+        function initRoscoGame(specFilter = "todas") {
+            let baseItems = defaultRoscoItems;
+            if (specFilter !== "todas") {
+                baseItems = defaultRoscoItems.filter(i => i.specialty === specFilter);
+                if (baseItems.length === 0) baseItems = defaultRoscoItems;
+            }
+            state.roscoItems = baseItems.map(i => ({
+                ...i,
+                status: "pending",
+                userSelected: null
+            }));
+            state.roscoCurrentIdx = 0;
+            state.roscoState = "playing";
+            saveRoscoState();
+            render();
+        }
+
+        function findNextRoscoIndex(fromIdx) {
+            const total = state.roscoItems.length;
+            for (let i = 1; i <= total; i++) {
+                const checkIdx = (fromIdx + i) % total;
+                if (state.roscoItems[checkIdx].status === "pending") {
+                    return checkIdx;
+                }
+            }
+            for (let i = 1; i <= total; i++) {
+                const checkIdx = (fromIdx + i) % total;
+                if (state.roscoItems[checkIdx].status === "skipped") {
+                    return checkIdx;
+                }
+            }
+            return -1;
+        }
+
+        function handleRoscoOptionSelect(optText) {
+            const currentItem = state.roscoItems[state.roscoCurrentIdx];
+            if (!currentItem || currentItem.status === "correct" || currentItem.status === "wrong") return;
+
+            currentItem.userSelected = optText;
+            if (optText === currentItem.correctAnswer) {
+                currentItem.status = "correct";
+                addRewards(5, "Acierto Rosco");
+            } else {
+                currentItem.status = "wrong";
+                showNotification(`Error en letra ${currentItem.letter}. 🔴`, "warning");
+            }
+
+            saveRoscoState();
+
+            const nextIdx = findNextRoscoIndex(state.roscoCurrentIdx);
+            if (nextIdx === -1) {
+                state.roscoState = "summary";
+                addRewards(20, "Completar el Rosco MediPalabra");
+            } else {
+                state.roscoCurrentIdx = nextIdx;
+            }
+            render();
+        }
+
+        function handleRoscoSkip() {
+            const currentItem = state.roscoItems[state.roscoCurrentIdx];
+            if (!currentItem) return;
+
+            currentItem.status = "skipped";
+            saveRoscoState();
+
+            const nextIdx = findNextRoscoIndex(state.roscoCurrentIdx);
+            if (nextIdx === -1) {
+                state.roscoState = "summary";
+                addRewards(20, "Completar el Rosco MediPalabra");
+            } else {
+                state.roscoCurrentIdx = nextIdx;
+            }
+            render();
+        }
+
+        function getRoscoCoords(index, total) {
+            const radius = 135;
+            const centerX = 175;
+            const centerY = 175;
+            const angle = (2 * Math.PI * index / total) - (Math.PI / 2);
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            return { x, y };
+        }
+
+        // ==========================================
+        // FLASHCARDS MODULE LOGIC & AI GENERATION
+        // ==========================================
+        async function openMinsalGuideFlashcards(guideObj, forceAI = false) {
+            state.selectedMinsalGuide = guideObj;
+            state.isGeneratingAI = true;
+            state.aiMessage = forceAI 
+                ? `Generando Mazo Inédito con IA para: ${guideObj.title}...🎴✨`
+                : `Cargando Flashcards oficial del MINSAL: ${guideObj.title}...🎴`;
+            render();
+
+            let cards = null;
+            if (!forceAI) {
+                cards = defaultFlashcardsDatabase[guideObj.id];
+            }
+
+            if (forceAI || !cards || cards.length === 0) {
+                cards = await fetchAIFlashcardsForGuide(guideObj.title);
+            }
+
+            state.isGeneratingAI = false;
+            if (cards && cards.length > 0) {
+                state.currentFlashcards = cards;
+                state.flashcardCurrentIdx = 0;
+                state.flashcardIsFlipped = false;
+                state.flashcardKnownCount = 0;
+                state.flashcardUnknownCount = 0;
+                state.flashcardsState = "player";
+                showNotification(`Mazo activo: ${cards.length} Flashcards generadas para este tema. ✨`, "success");
+            } else {
+                showNotification("No se pudieron generar las flashcards para esta guía en este momento.", "warning");
+            }
+            render();
+        }
+
+        async function generateMoreFlashcardsForCurrentTopic() {
+            if (!state.selectedMinsalGuide && state.currentFlashcards.length === 0) return;
+            const topicTitle = state.selectedMinsalGuide ? state.selectedMinsalGuide.title : "Medicina General";
+
+            state.isGeneratingAI = true;
+            state.aiMessage = `Generando 5 nuevas Flashcards adicionales sobre: ${topicTitle}...✨`;
+            render();
+
+            const newCards = await fetchAIFlashcardsForGuide(topicTitle);
+            state.isGeneratingAI = false;
+
+            if (newCards && newCards.length > 0) {
+                state.currentFlashcards = [...state.currentFlashcards, ...newCards];
+                showNotification(`¡Se agregaron ${newCards.length} nuevas tarjetas al mazo! Total: ${state.currentFlashcards.length} Flashcards. 🎴`, "success");
+            } else {
+                showNotification("No se pudieron agregar nuevas tarjetas.", "warning");
+            }
+            render();
+        }
+
+        function handleFlashcardAnswer(isKnown) {
+            if (isKnown) {
+                state.flashcardKnownCount++;
+                addRewards(5, "Flashcard memorizada");
+            } else {
+                state.flashcardUnknownCount++;
+            }
+
+            if (state.flashcardCurrentIdx < state.currentFlashcards.length - 1) {
+                state.flashcardCurrentIdx++;
+                state.flashcardIsFlipped = false;
+            } else {
+                showNotification("¡Has completado las tarjetas actuales del mazo! 🏆", "success");
+            }
+            render();
+        }
+
+        // LLM Call for Flashcards
+        async function fetchAIFlashcardsForGuide(guideTitle) {
+            const apiKey = "";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `Eres el Motor Oficial de Flashcards de "Mi EUNACOM".
+Genera un mazo de exactamente 5 Flashcards de estudio clínico basadas estrictamente en el tema o Guía Clínica Oficial del MINSAL: "${guideTitle}".
+
+Estructura obligatoria JSON array:
+- front: Pregunta clínica o escenario gatillante de alta rentabilidad EUNACOM (1-2 oraciones)
+- back: Respuesta técnica con la conducta de elección MINSAL (2-3 oraciones)
+- pearl: Regla nemotécnica o dato de oro "📌 La Perla EUNACOM"`;
+
+            const payload = {
+                contents: [{ parts: [{ text: `Genera 5 Flashcards exclusivas e inéditas para la guía o tema: ${guideTitle}.` }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                front: { type: "STRING" },
+                                back: { type: "STRING" },
+                                pearl: { type: "STRING" }
+                            },
+                            required: ["front", "back", "pearl"]
+                        }
+                    }
+                }
+            };
+
+            const delays = [1000, 2000, 4000];
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) {
+                        return JSON.parse(text);
+                    }
+                } catch (err) {
+                    if (i < 2) await new Promise(r => setTimeout(r, delays[i]));
+                }
+            }
+            return null;
+        }
+
+        // LLM Call for Clinical Questions
+        async function fetchAIQuestions(specialtyKey, count = 3) {
+            const label = specialtyLabels[specialtyKey] || "Ginecología y Obstetricia";
+            const apiKey = "";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `Actúas como el Motor Inteligente de Preparación EUNACOM de nivel experto ("Mi EUNACOM Pro").
+Tu objetivo es redactar un set de exactamente ${count} pregunta(s) inédita(s) de opción múltiple con alto rigor técnico para la especialidad médica de: "${label}".`;
+
+            const payload = {
+                contents: [{ parts: [{ text: `Genera un set de exactamente ${count} caso(s) clínico(s) inédito(s) para: ${label}.` }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                id: { type: "STRING" },
+                                area: { type: "STRING" },
+                                difficulty: { type: "STRING" },
+                                question: { type: "STRING" },
+                                options: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            id: { type: "STRING" },
+                                            text: { type: "STRING" }
+                                        },
+                                        required: ["id", "text"]
+                                    }
+                                },
+                                correctAnswer: { type: "STRING" },
+                                justification: { type: "STRING" },
+                                distractors: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        A: { type: "STRING" },
+                                        B: { type: "STRING" },
+                                        C: { type: "STRING" },
+                                        D: { type: "STRING" },
+                                        E: { type: "STRING" }
+                                    },
+                                    required: ["A", "B", "C", "D", "E"]
+                                },
+                                pearl: { type: "STRING" },
+                                reference: { type: "STRING" }
+                            },
+                            required: ["id", "area", "difficulty", "question", "options", "correctAnswer", "justification", "distractors", "pearl", "reference"]
+                        }
+                    }
+                }
+            };
+
+            const delays = [1000, 2000, 4000];
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                    
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) {
+                        return JSON.parse(text);
+                    }
+                } catch (err) {
+                    if (i < 2) await new Promise(r => setTimeout(r, delays[i]));
+                }
+            }
+            return null;
+        }
+
+        // LLM Call for Diagnóstico en 1 Minuto Cases
+        async function fetchAIDiagMinutoCase(specialtyKey) {
+            const label = specialtyLabels[specialtyKey] || "Medicina General";
+            const apiKey = "";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `Eres el Motor Oficial de "Diagnóstico en 1 Minuto" de Mi EUNACOM.
+Genera exactamente 1 caso clínico completo para la especialidad de: "${label}".`;
+
+            const payload = {
+                contents: [{ parts: [{ text: `Genera 1 caso de Diagnóstico en 1 minuto para ${label}.` }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            id: { type: "STRING" },
+                            specialty: { type: "STRING" },
+                            mainPrompt: { type: "STRING" },
+                            pistas: {
+                                type: "OBJECT",
+                                properties: {
+                                    pista1: { type: "STRING" },
+                                    pista2: { type: "STRING" },
+                                    pista3: { type: "STRING" },
+                                    pista4: { type: "STRING" },
+                                    pista5: { type: "STRING" }
+                                },
+                                required: ["pista1", "pista2", "pista3", "pista4", "pista5"]
+                            },
+                            correctDiagnosis: { type: "STRING" },
+                            keyInfo: {
+                                type: "ARRAY",
+                                items: { type: "STRING" }
+                            }
+                        },
+                        required: ["id", "specialty", "mainPrompt", "pistas", "correctDiagnosis", "keyInfo"]
+                    }
+                }
+            };
+
+            const delays = [1000, 2000, 4000];
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) {
+                        return JSON.parse(text);
+                    }
+                } catch (err) {
+                    if (i < 2) await new Promise(r => setTimeout(r, delays[i]));
+                }
+            }
+            return null;
+        }
+
+        async function startSimulator(specialty, count = 3) {
+            stopDiagTimer();
+            state.showCountModal = false;
+            state.selectedSpecialty = specialty;
+            state.questionCount = count;
+            state.isGeneratingAI = true;
+            state.aiMessage = `Generando ${count} caso(s) clínico(s) inédito(s) de ${specialtyLabels[specialty] || specialty} con Inteligencia Artificial...`;
+            render();
+
+            const aiQuestions = await fetchAIQuestions(specialty, count);
+
+            state.isGeneratingAI = false;
+            if (aiQuestions && aiQuestions.length > 0) {
+                state.questions = aiQuestions;
+                showNotification(`¡${aiQuestions.length} caso(s) clínico(s) creado(s) exitosamente por la IA! 🤖✨`, "success");
+            } else {
+                let fbQuestions = databaseFallback[specialty] || databaseFallback["ginecologia_obstetricia"];
+                let resultFB = [];
+                for (let i = 0; i < count; i++) {
+                    let baseQ = fbQuestions[i % fbQuestions.length];
+                    resultFB.push({ ...baseQ, id: `${baseQ.id}_${i}` });
+                }
+                state.questions = resultFB;
+                showNotification("No se pudo conectar con la IA. Cargando banco local de respaldo.", "warning");
+            }
+
+            state.currentIdx = 0;
+            state.selectedAnswers = {};
+            state.submitted = {};
+            state.score = 0;
+            state.isReinforcement = false;
+            state.view = "simulator";
+            render();
+        }
+
+        async function startDiagMinutoChallenge(specialty) {
+            stopDiagTimer();
+            state.diagSpecialty = specialty;
+
+            let actualKey = specialty;
+            if (specialty === "aleatorio" || !specialty) {
+                const keys = Object.keys(specialtyLabels);
+                actualKey = keys[Math.floor(Math.random() * keys.length)];
+            }
+
+            const labelName = specialtyLabels[actualKey] || "Medicina General";
+            state.isGeneratingAI = true;
+            state.aiMessage = `Generando caso clínico de "Diagnóstico en 1 Minuto" para ${labelName} (Tema Aleatorio)...⏱️`;
+            render();
+
+            const aiCase = await fetchAIDiagMinutoCase(actualKey);
+
+            state.isGeneratingAI = false;
+            if (aiCase && aiCase.mainPrompt) {
+                state.diagCurrentCase = { ...aiCase, specialty: actualKey };
+                showNotification(`¡Caso aleatorio de ${labelName} cargado! ⏱️🔥`, "success");
+            } else {
+                const randomFb = diagMinutoFallback[Math.floor(Math.random() * diagMinutoFallback.length)];
+                state.diagCurrentCase = randomFb;
+                showNotification("Cargando caso de rapidez local.", "warning");
+            }
+
+            state.diagCluesRevealed = { 1: false, 2: false, 3: false, 4: false, 5: false };
+            state.diagState = "playing";
+            state.showKeyInfoModal = false;
+            render();
+            startDiagTimer();
+        }
+
+        function startReinforcement() {
+            stopDiagTimer();
+            const failedMap = new Map();
+            state.attempts.forEach(att => {
+                (att.questions || []).forEach((q, idx) => {
+                    if (att.answers[idx] && att.answers[idx] !== q.correctAnswer) {
+                        failedMap.set(q.id, q);
+                    }
+                });
+            });
+
+            if (failedMap.size === 0) return;
+
+            state.selectedSpecialty = "todas";
+            state.questions = Array.from(failedMap.values());
+            state.currentIdx = 0;
+            state.selectedAnswers = {};
+            state.submitted = {};
+            state.score = 0;
+            state.isReinforcement = true;
+            state.view = "simulator";
+            render();
+        }
+
+        function handleSelectOption(optId) {
+            if (state.submitted[state.currentIdx]) return;
+            state.selectedAnswers[state.currentIdx] = optId;
+            render();
+        }
+
+        function handleSubmitAnswer() {
+            stopDiagTimer();
+            const currentQ = state.questions[state.currentIdx];
+            const sel = state.selectedAnswers[state.currentIdx];
+            if (!sel) return;
+
+            const isCorr = sel === currentQ.correctAnswer;
+            if (isCorr) {
+                state.score++;
+                addRewards(5, "Pregunta Respondida");
+            }
+            state.submitted[state.currentIdx] = true;
+            render();
+        }
+
+        function handleNext() {
+            stopDiagTimer();
+            if (state.currentIdx < state.questions.length - 1) {
+                state.currentIdx++;
+                render();
+            } else {
+                finishSimulator();
+            }
+        }
+
+        function handlePrev() {
+            stopDiagTimer();
+            if (state.currentIdx > 0) {
+                state.currentIdx--;
+                render();
+            }
+        }
+
+        function finishSimulator() {
+            stopDiagTimer();
+            const pct = (state.score / state.questions.length);
+            if (pct >= 0.7) {
+                addRewards(150, "Aprobar Ensayo");
+            }
+
+            const attempt = {
+                specialty: state.selectedSpecialty,
+                score: state.score,
+                totalQuestions: state.questions.length,
+                timestamp: Date.now(),
+                answers: state.selectedAnswers,
+                isReinforcement: state.isReinforcement,
+                questions: state.questions
+            };
+            state.attempts.unshift(attempt);
+            saveAttempts();
+            state.view = "finished";
+            render();
+        }
+
+        function render() {
+            const app = document.getElementById("app");
+            const totalAttempts = state.attempts.length;
+            const avgPct = totalAttempts > 0 
+                ? Math.round((state.attempts.reduce((a, c) => a + (c.score / c.totalQuestions), 0) / totalAttempts) * 100)
+                : 0;
+
+            const failedMap = new Map();
+            state.attempts.forEach(att => {
+                (att.questions || []).forEach((q, idx) => {
+                    if (att.answers[idx] && att.answers[idx] !== q.correctAnswer) {
+                        failedMap.set(q.id, q);
+                    }
+                });
+            });
+            const failedCount = failedMap.size;
+            const lvl = getLevelData(state.userXP);
+
+            let html = `
+                <!-- Notification Banner -->
+                ${state.notification ? `
+                    <div class="fixed top-5 right-5 z-50 p-4 rounded-2xl shadow-xl border animate-fadeIn text-xs font-bold flex items-center gap-2 ${
+                        state.notification.type === 'success' ? 'bg-emerald-50 text-emerald-900 border-emerald-200' :
+                        state.notification.type === 'warning' ? 'bg-amber-50 text-amber-900 border-amber-200' :
+                        'bg-blue-50 text-blue-900 border-blue-200'
+                    }">
+                        <span>${state.notification.type === 'success' ? '✅' : '⚠️'}</span>
+                        <span>${state.notification.msg}</span>
+                    </div>
+                ` : ''}
+
+                <!-- Modal Centro de Ayuda XP (Hasta Nivel 50) -->
+                ${state.showGamificationModal ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+                        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+                            <div class="p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
+                                <div>
+                                    <span class="text-[10px] font-extrabold uppercase text-cyan-600 tracking-wider">CENTRO DE AYUDA</span>
+                                    <h3 class="text-xl font-black text-slate-900 mt-1">Escala de Rangos y Experiencia (XP)</h3>
+                                </div>
+                                <button onclick="state.showGamificationModal=false; render();" class="text-slate-400 hover:text-slate-600 text-lg font-bold">
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div class="p-6 overflow-y-auto flex flex-col gap-6 text-xs text-slate-700 leading-relaxed">
+                                <div>
+                                    <h4 class="font-extrabold text-sm text-slate-900 mb-1">Carrera Médica EUNACOM (Nivel 1 al 50)</h4>
+                                    <p class="text-slate-500 mb-3">
+                                        Cada 5 niveles desbloqueas un nuevo rango en tu formación profesional.
+                                    </p>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 font-bold text-[11px]">
+                                        ${medicalRanks.map(r => `
+                                            <div class="p-2.5 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
+                                                <span class="text-cyan-700">${r.name}</span>
+                                                <span class="text-slate-400 font-extrabold text-[10px]">Niveles ${r.minLevel}-${r.maxLevel}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 class="font-extrabold text-sm text-slate-900 mb-3 uppercase tracking-wider text-slate-400">Cómo ganas XP</h4>
+                                    <div class="border border-slate-200 rounded-2xl overflow-hidden">
+                                        <table class="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400">
+                                                    <th class="p-3">Acción</th>
+                                                    <th class="p-3">Puntos de Experiencia</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-100 text-xs font-semibold">
+                                                <tr>
+                                                    <td class="p-3">Responder una pregunta nueva</td>
+                                                    <td class="p-3 text-cyan-600 font-extrabold">+5 XP</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="p-3">Aprobar un Ensayo o Reconstrucción</td>
+                                                    <td class="p-3 text-cyan-600 font-extrabold">+150 XP</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="p-3">Ganar un Desafío (Diagnóstico 1 min)</td>
+                                                    <td class="p-3 text-cyan-600 font-extrabold">+10 XP</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="p-3">Diagnóstico correcto sin pistas</td>
+                                                    <td class="p-3 text-cyan-600 font-extrabold">+20 XP</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="p-3">Completar Rosco MediPalabra</td>
+                                                    <td class="p-3 text-cyan-600 font-extrabold">+20 XP</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="p-3">Dominar una Flashcard</td>
+                                                    <td class="p-3 text-cyan-600 font-extrabold">+5 XP</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Modal Selector de Avatar -->
+                ${state.showAvatarPicker ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+                        <div class="bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-black text-slate-900 text-sm">Elige tu Avatar Médico</h3>
+                                <button onclick="state.showAvatarPicker=false; render();" class="text-slate-400 font-bold">✕</button>
+                            </div>
+                            <div class="grid grid-cols-4 gap-3 py-2">
+                                ${avatarEmojis.map(emoji => `
+                                    <button 
+                                        onclick="state.userAvatar='${emoji}'; localStorage.setItem('eunacom_pro_avatar', '${emoji}'); state.showAvatarPicker=false; render();"
+                                        class="p-4 bg-slate-50 hover:bg-cyan-50 border border-slate-200 hover:border-cyan-400 rounded-2xl text-2xl transition-all text-center">
+                                        ${emoji}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Modal Información Clave -->
+                ${state.showKeyInfoModal && state.diagCurrentCase ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+                        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[85vh]">
+                            <div class="p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
+                                <div>
+                                    <span class="text-[10px] font-extrabold uppercase text-cyan-600 bg-cyan-50 px-2.5 py-1 rounded-full border border-cyan-100">
+                                        PARA FIJAR EL APRENDIZAJE
+                                    </span>
+                                    <h3 class="text-xl font-black text-slate-900 mt-2">Información clave</h3>
+                                </div>
+                                <button onclick="state.showKeyInfoModal=false; render();" class="text-slate-400 hover:text-slate-600 text-lg font-bold">
+                                    ✕
+                                </button>
+                            </div>
+                            <div class="p-6 overflow-y-auto flex flex-col gap-3 text-xs leading-relaxed">
+                                ${(state.diagCurrentCase.keyInfo || []).map(info => `
+                                    <div class="flex items-start gap-3 p-3 bg-cyan-50/40 rounded-2xl border border-cyan-100/60 text-slate-700">
+                                        <span class="w-5 h-5 rounded-full bg-cyan-500 text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">i</span>
+                                        <p class="font-medium">${info}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                                <button onclick="state.showKeyInfoModal=false; render();" class="px-6 py-2.5 bg-cyan-600 text-white font-bold rounded-xl text-xs shadow-md hover:bg-cyan-700 transition-colors">
+                                    Entendido
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Modal para Seleccionar Cantidad de Preguntas -->
+                ${state.showCountModal ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-fadeIn">
+                        <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-100 flex flex-col gap-6">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="text-[10px] font-extrabold uppercase text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+                                        Configuración del Ensayo
+                                    </span>
+                                    <h3 class="text-xl font-black text-slate-900 mt-2">
+                                        ${specialtyLabels[state.pendingSpecialty] || 'Especialidad'}
+                                    </h3>
+                                    <p class="text-xs text-slate-500 mt-1">
+                                        ¿Cuántas preguntas deseas en este ensayo? La Inteligencia Artificial redactará los casos clínicos en tiempo real.
+                                    </p>
+                                </div>
+                                <button onclick="closeCountModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="startSimulator(state.pendingSpecialty, 1)" class="p-4 rounded-2xl border-2 border-slate-150 hover:border-blue-500 hover:bg-blue-50/50 flex flex-col items-center justify-center gap-1 transition-all group">
+                                    <span class="text-2xl font-black text-slate-800 group-hover:text-blue-600">1</span>
+                                    <span class="text-[11px] font-bold text-slate-500 group-hover:text-blue-700">Pregunta Express</span>
+                                </button>
+                                <button onclick="startSimulator(state.pendingSpecialty, 3)" class="p-4 rounded-2xl border-2 border-slate-150 hover:border-blue-500 hover:bg-blue-50/50 flex flex-col items-center justify-center gap-1 transition-all group">
+                                    <span class="text-2xl font-black text-slate-800 group-hover:text-blue-600">3</span>
+                                    <span class="text-[11px] font-bold text-slate-500 group-hover:text-blue-700">Preguntas (Estándar)</span>
+                                </button>
+                                <button onclick="startSimulator(state.pendingSpecialty, 5)" class="p-4 rounded-2xl border-2 border-slate-150 hover:border-blue-500 hover:bg-blue-50/50 flex flex-col items-center justify-center gap-1 transition-all group">
+                                    <span class="text-2xl font-black text-slate-800 group-hover:text-blue-600">5</span>
+                                    <span class="text-[11px] font-bold text-slate-500 group-hover:text-blue-700">Preguntas (Profundo)</span>
+                                </button>
+                                <button onclick="startSimulator(state.pendingSpecialty, 10)" class="p-4 rounded-2xl border-2 border-slate-150 hover:border-blue-500 hover:bg-blue-50/50 flex flex-col items-center justify-center gap-1 transition-all group">
+                                    <span class="text-2xl font-black text-slate-800 group-hover:text-blue-600">10</span>
+                                    <span class="text-[11px] font-bold text-slate-500 group-hover:text-blue-700">Preguntas (Simulacro)</span>
+                                </button>
+                            </div>
+
+                            <button onclick="closeCountModal()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-2xl text-xs transition-colors">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- AI Generation Modal -->
+                ${state.isGeneratingAI ? `
+                    <div class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-white text-center">
+                        <div class="relative w-20 h-20 mb-5">
+                            <div class="absolute inset-0 rounded-full border-4 border-t-blue-500 border-r-cyan-500 border-b-transparent border-l-transparent animate-spin"></div>
+                            <div class="absolute inset-2 bg-slate-800 rounded-full flex items-center justify-center">
+                                <span class="text-2xl">🩺</span>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-black tracking-tight">Motor de IA Mi EUNACOM Pro</h3>
+                        <p class="text-xs text-cyan-300 font-bold uppercase tracking-widest mt-1">Generando Contenido según Norma MINSAL</p>
+                        <p class="text-xs text-slate-300 max-w-sm mt-3 font-medium leading-relaxed bg-slate-800/80 px-4 py-2.5 rounded-xl border border-slate-700">
+                            "${state.aiMessage}"
+                        </p>
+                    </div>
+                ` : ''}
+
+                <!-- Header & User XP Gamification Badge -->
+                <header class="flex flex-col lg:flex-row justify-between items-center border-b border-slate-200 pb-6 mb-8 gap-6">
+                    <div class="flex items-center gap-3 cursor-pointer" onclick="stopDiagTimer(); state.activeTab='simulator'; state.view='dashboard'; render();">
+                        <div class="bg-cyan-600 text-white font-black px-4 py-2.5 rounded-2xl text-xl shadow-lg shadow-cyan-200">
+                            PRO
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                                Mi EUNACOM Pro <span class="text-xs font-bold text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">v6.5</span>
+                            </h1>
+                            <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">Simulador de Aprendizaje Activo & Avatares</p>
+                        </div>
+                    </div>
+
+                    <!-- User Level & XP Widget with Avatar Picker -->
+                    <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-5 w-full lg:w-auto justify-between">
+                        <div class="flex items-center gap-3">
+                            <div 
+                                onclick="state.showAvatarPicker=true; render();"
+                                title="Haz clic para cambiar tu avatar"
+                                class="w-12 h-12 rounded-full bg-cyan-50 border-2 border-cyan-400 flex items-center justify-center text-2xl flex-shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-sm">
+                                ${state.userAvatar}
+                            </div>
+                            <div>
+                                <h4 class="font-black text-sm text-cyan-700 leading-tight">${lvl.rankName}</h4>
+                                <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Nivel ${lvl.level} / 50</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-1 w-40">
+                            <div class="flex justify-between items-center text-[11px] font-black">
+                                <span class="text-slate-400">Progreso</span>
+                                <span class="text-slate-800">${lvl.currentLevelXP} / ${lvl.totalLevelXP} XP</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                <div class="bg-gradient-to-r from-pink-500 to-rose-500 h-full transition-all duration-500" style="width: ${lvl.pct}%;"></div>
+                            </div>
+                            <button 
+                                onclick="state.showGamificationModal=true; render();"
+                                class="text-[10px] font-extrabold text-cyan-600 hover:underline text-left mt-0.5">
+                                ¿Cómo funcionan los XP y Niveles?
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-3 border-l border-slate-100 pl-4">
+                            <div class="text-center">
+                                <span class="text-xs font-black text-rose-600 block">🔥 ${state.streakDays}d</span>
+                                <span class="text-[9px] font-bold text-slate-400 uppercase">Racha</span>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Navigation Tabs -->
+                <div class="flex flex-wrap bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-1 mb-8">
+                    <button 
+                        onclick="stopDiagTimer(); state.activeTab='simulator'; state.view='dashboard'; render();"
+                        class="px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${state.activeTab === 'simulator' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
+                        🎯 Simuladores IA (25 Áreas)
+                    </button>
+                    <button 
+                        onclick="stopDiagTimer(); state.activeTab='diag_minuto'; state.diagState='instructions'; render();"
+                        class="px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1 ${state.activeTab === 'diag_minuto' ? 'bg-white text-cyan-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
+                        ⏱️ Diagnóstico en 1 min
+                    </button>
+                    <button 
+                        onclick="stopDiagTimer(); state.activeTab='flashcards'; state.flashcardsState='home'; render();"
+                        class="px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1 ${state.activeTab === 'flashcards' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
+                        🎴 Flashcards MINSAL
+                    </button>
+                    <button 
+                        onclick="stopDiagTimer(); state.activeTab='medipalabra'; render();"
+                        class="px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1 ${state.activeTab === 'medipalabra' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
+                        ⚡ MediPalabra (Rosco)
+                    </button>
+                </div>
+            `;
+
+            // DASHBOARD COMPONENT (STATS & SPECIALTIES GRID)
+            if (state.activeTab === "simulator" && state.view === "dashboard") {
+                html += `
+                    <div class="flex flex-col gap-8 animate-fadeIn">
+                        
+                        <!-- BOTÓN DE INICIO / BIENVENIDA -->
+                        <div class="bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-3xl p-6 md:p-8 shadow-lg flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div>
+                                <span class="bg-white/20 text-cyan-100 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider inline-block mb-2">
+                                    Preparación Oficial EUNACOM 2026
+                                </span>
+                                <h2 class="text-2xl font-black">¡Bienvenido a tu plataforma de estudio clínico!</h2>
+                                <p class="text-xs text-cyan-100 mt-1 max-w-xl leading-relaxed">
+                                    Elige una especialidad abajo para comenzar un ensayo con IA, pon a prueba tu rapidez con el diagnóstico en 1 minuto o repasa con las flashcards del MINSAL.
+                                </p>
+                            </div>
+                            <button 
+                                onclick="openCountModal('ginecologia_obstetricia')"
+                                class="px-8 py-4 bg-white hover:bg-slate-100 text-cyan-700 font-black text-sm rounded-2xl shadow-xl transition-all flex items-center gap-2 flex-shrink-0">
+                                <span>Comenzar preparación EUNACOM 🚀</span>
+                            </button>
+                        </div>
+
+                        <!-- Stats Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex items-center gap-4">
+                                <div class="p-4 bg-blue-50 text-blue-600 rounded-2xl text-2xl">📊</div>
+                                <div>
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Promedio Global</span>
+                                    <span class="text-2xl font-black text-slate-900">${avgPct}%</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex items-center gap-4">
+                                <div class="p-4 bg-emerald-50 text-emerald-600 rounded-2xl text-2xl">📝</div>
+                                <div>
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Simulacros Rendidos</span>
+                                    <span class="text-2xl font-black text-slate-900">${totalAttempts}</span>
+                                </div>
+                            </div>
+
+                            <div class="rounded-3xl p-6 border shadow-sm flex items-center justify-between gap-4 ${failedCount > 0 ? "bg-amber-50 border-amber-200" : "bg-white border-slate-100 opacity-60"}">
+                                <div>
+                                    <span class="text-xs font-bold text-amber-800 uppercase tracking-wider block">Preguntas Erradas</span>
+                                    <span class="text-2xl font-black text-amber-950">${failedCount} acumuladas</span>
+                                </div>
+                                <button 
+                                    onclick="startReinforcement()" 
+                                    ${failedCount === 0 ? 'disabled' : ''} 
+                                    class="px-4 py-2.5 rounded-xl font-extrabold text-xs shadow-md ${failedCount > 0 ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}">
+                                    Modo Refuerzo 🎯
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Specialties Grid -->
+                        <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 class="text-xl font-black text-slate-900">Selecciona Especialidad para Pilotar con IA</h2>
+                                    <p class="text-xs text-slate-500 mt-0.5">Haz clic para elegir la cantidad de preguntas de tu ensayo (1, 3, 5 o 10 preguntas).</p>
+                                </div>
+                                <span class="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">Motor IA Activo</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                ${Object.entries(specialtyLabels).map(([key, label]) => `
+                                    <button 
+                                        onclick="openCountModal('${key}')"
+                                        class="p-4 rounded-2xl border border-slate-150 hover:border-blue-500 hover:bg-blue-50/50 text-left transition-all flex justify-between items-center group bg-slate-50/30">
+                                        <span class="font-bold text-sm text-slate-700 group-hover:text-blue-900">${label}</span>
+                                        <span class="text-slate-300 group-hover:text-blue-500 font-extrabold text-sm">✨</span>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } 
+
+            // TAB: FLASHCARDS MODULE
+            if (state.activeTab === "flashcards") {
+                if (state.flashcardsState === "home") {
+                    html += `
+                        <div class="flex flex-col gap-8 animate-fadeIn max-w-5xl mx-auto">
+                            <div class="flex items-center gap-2">
+                                <span class="text-rose-500 font-bold text-lg">┃</span>
+                                <div>
+                                    <h2 class="text-2xl font-black text-slate-900">Flashcards de estudio</h2>
+                                    <p class="text-xs text-slate-500 mt-1">Elige una de las guías del MINSAL y pon a prueba tus conocimientos.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm flex flex-col justify-between gap-6 relative overflow-hidden">
+                                    <div>
+                                        <h3 class="text-lg font-black text-slate-900">Crear tus propias flashcards con IA</h3>
+                                        <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+                                            Ingresa el tema médico que más te cuesta y la Inteligencia Artificial armará tu mazo personalizado en segundos.
+                                        </p>
+                                    </div>
+                                    <button onclick="state.flashcardsState='custom_creator'; render();" class="w-32 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-extrabold text-xs rounded-2xl shadow-md text-center">Crear con IA ✨</button>
+                                </div>
+
+                                <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm flex flex-col justify-between gap-6 relative overflow-hidden">
+                                    <div>
+                                        <h3 class="text-lg font-black text-slate-900">Flashcards guías MINSAL</h3>
+                                        <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+                                            Flashcards a partir de las 18 guías clínicas oficiales del MINSAL. Listas para estudiar o bien generar mazos inéditos con IA.
+                                        </p>
+                                    </div>
+                                    <button onclick="state.flashcardsState='minsal_list'; render();" class="w-28 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-extrabold text-xs rounded-2xl shadow-md text-center">Abrir</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (state.flashcardsState === "minsal_list") {
+                    html += `
+                        <div class="flex flex-col gap-6 animate-fadeIn max-w-4xl mx-auto">
+                            <button onclick="state.flashcardsState='home'; render();" class="text-xs font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1 mb-2">◀ Volver a Flashcards</button>
+                            <h2 class="text-2xl font-black text-slate-900 flex items-center gap-2"><span class="text-rose-500 font-bold">┃</span> Flashcards guías MINSAL</h2>
+
+                            <div class="flex flex-col gap-3">
+                                ${minsalGuidesList.map(guide => `
+                                    <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div class="flex items-center gap-4">
+                                            <span class="text-xs font-extrabold text-rose-500 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-100">${guide.id}</span>
+                                            <h3 class="font-extrabold text-xs md:text-sm text-slate-800">${guide.title}</h3>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button onclick='openMinsalGuideFlashcards(${JSON.stringify(guide).replace(/'/g, "&apos;")}, true)' class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold text-xs rounded-xl shadow-sm">Generar con IA ✨</button>
+                                            <button onclick='openMinsalGuideFlashcards(${JSON.stringify(guide).replace(/'/g, "&apos;")}, false)' class="px-4 py-2 bg-slate-100 text-slate-700 font-extrabold text-xs rounded-xl">Abrir</button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (state.flashcardsState === "player" && state.currentFlashcards.length > 0) {
+                    const card = state.currentFlashcards[state.flashcardCurrentIdx];
+                    const isFlipped = state.flashcardIsFlipped;
+
+                    html += `
+                        <div class="flex flex-col gap-6 animate-fadeIn max-w-2xl mx-auto">
+                            <div class="flex justify-between items-center">
+                                <button onclick="state.flashcardsState='minsal_list'; render();" class="text-xs font-bold text-slate-400">◀ Volver al catálogo</button>
+                                <span class="text-xs font-extrabold text-cyan-600 bg-cyan-50 px-3 py-1 rounded-full uppercase">Ficha ${state.flashcardCurrentIdx + 1} de ${state.currentFlashcards.length}</span>
+                            </div>
+
+                            <div class="bg-slate-100 border border-slate-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3">
+                                <div class="text-center sm:text-left">
+                                    <span class="text-[10px] font-black uppercase text-slate-400 block">Tema Seleccionado</span>
+                                    <h3 class="text-sm font-black text-slate-800 mt-0.5">${state.selectedMinsalGuide ? state.selectedMinsalGuide.title : 'Estudio Activo'}</h3>
+                                </div>
+                                <button onclick="generateMoreFlashcardsForCurrentTopic()" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-extrabold text-xs rounded-xl shadow-md">✨ Generar +5 Tarjetas con IA</button>
+                            </div>
+
+                            <div onclick="state.flashcardIsFlipped = !state.flashcardIsFlipped; render();" class="cursor-pointer perspective-1000 min-h-[300px] w-full">
+                                <div class="relative w-full min-h-[300px] duration-500 transform-style-3d transition-transform rounded-3xl border shadow-md ${isFlipped ? 'rotate-y-180' : ''}">
+                                    <div class="absolute inset-0 w-full h-full bg-white rounded-3xl p-8 flex flex-col justify-between backface-hidden">
+                                        <div>
+                                            <span class="text-[10px] font-extrabold uppercase text-cyan-600 bg-cyan-50 px-2.5 py-1 rounded-full border border-cyan-100 inline-block mb-4">PREGUNTA / ESCENARIO</span>
+                                            <p class="text-base md:text-lg font-black text-slate-900 leading-relaxed">${card.front}</p>
+                                        </div>
+                                        <div class="flex justify-between items-center border-t border-slate-100 pt-4 text-xs font-bold text-slate-400">
+                                            <span>Haz clic para voltear 🔄</span>
+                                            <span class="text-cyan-600">Mi EUNACOM Pro</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="absolute inset-0 w-full h-full bg-slate-900 text-white rounded-3xl p-8 flex flex-col justify-between backface-hidden rotate-y-180 border border-slate-800 overflow-y-auto">
+                                        <div class="flex flex-col gap-3">
+                                            <span class="text-[10px] font-extrabold uppercase text-emerald-400 bg-emerald-900/50 px-2.5 py-1 rounded-full border border-emerald-700/50 inline-block">CONDUCTA MINSAL / RESPUESTA</span>
+                                            <p class="text-sm text-slate-200 leading-relaxed font-medium">${card.back}</p>
+                                            ${card.pearl ? `<div class="bg-slate-800 p-3.5 rounded-2xl border border-slate-700 text-xs text-amber-300 font-semibold mt-2">${card.pearl}</div>` : ''}
+                                        </div>
+                                        <div class="flex justify-between items-center border-t border-slate-800 pt-4 text-xs font-bold text-slate-400 mt-4">
+                                            <span>Volver a girar 🔄</span>
+                                            <span class="text-emerald-400">Certificado MINSAL</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col items-center gap-3">
+                                <span class="text-xs font-black text-slate-600">¿Sabías la respuesta antes de voltear?</span>
+                                <div class="grid grid-cols-2 gap-4 w-full">
+                                    <button onclick="handleFlashcardAnswer(false)" class="py-3 px-4 bg-white border-2 border-rose-500 text-rose-600 font-extrabold text-xs rounded-2xl">🔴 No la sabía</button>
+                                    <button onclick="handleFlashcardAnswer(true)" class="py-3 px-4 bg-emerald-600 text-white font-extrabold text-xs rounded-2xl shadow-md">🟢 Sí, la sabía (+5 XP)</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (state.flashcardsState === "custom_creator") {
+                    html += `
+                        <div class="flex flex-col gap-6 animate-fadeIn max-w-3xl mx-auto">
+                            <button onclick="state.flashcardsState='home'; render();" class="text-xs font-bold text-slate-400 flex items-center gap-1 mb-2">◀ Volver a Flashcards</button>
+                            <h2 class="text-2xl font-black text-slate-900">Crear tus propias flashcards con IA</h2>
+
+                            <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm flex flex-col gap-4">
+                                <label class="text-xs font-extrabold text-slate-700">Tema o Guía Clínica personalizada:</label>
+                                <input id="custom-fc-input" type="text" placeholder="Ej: Manejo de la Cetoacidosis Diabética en Urgencias" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold focus:outline-none" />
+                                <button onclick="const val = document.getElementById('custom-fc-input').value; if(val) openMinsalGuideFlashcards({ id: 'custom', title: val }, true);" class="py-3.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-black text-xs rounded-2xl shadow-md">Generar Mazo de Flashcards con IA ✨</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // TAB: DIAGNÓSTICO EN 1 MINUTO
+            if (state.activeTab === "diag_minuto" && state.diagState === "instructions") {
+                html += `
+                    <div class="flex flex-col gap-6 animate-fadeIn max-w-4xl mx-auto">
+                        <div class="text-xs font-extrabold uppercase text-cyan-600 tracking-wider flex items-center gap-2">
+                            <span>JUEGO</span> · <span>DIAGNÓSTICO EN 1 MINUTO</span>
+                        </div>
+                        <h2 class="text-3xl font-black text-slate-900">Diagnóstico en 1 minuto</h2>
+
+                        <div class="bg-cyan-50/60 border border-cyan-150 rounded-3xl p-6 md:p-8 flex flex-col gap-6">
+                            <div>
+                                <h3 class="text-lg font-black text-slate-900">Instrucciones</h3>
+                                <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+                                    ¡Desafía tu mente clínica bajo presión! Recibes un caso real y tienes <strong class="text-cyan-700">60 segundos</strong> para llegar al diagnóstico.
+                                </p>
+                            </div>
+
+                            <div class="flex flex-col gap-3">
+                                <h4 class="text-xs font-black text-cyan-900 uppercase tracking-wider">¿Cómo funciona?</h4>
+                                <ul class="flex flex-col gap-2.5 text-xs text-slate-700">
+                                    <li class="flex items-start gap-2"><span class="text-cyan-500 font-black">•</span><span>Lee el <strong class="text-slate-900">caso clínico</strong> con atención.</span></li>
+                                    <li class="flex items-start gap-2"><span class="text-cyan-500 font-black">•</span><span>¿No sabes la respuesta? Puedes <strong class="text-cyan-700">liberar una o más pistas</strong> para ayudarte a llegar al diagnóstico correcto.</span></li>
+                                    <li class="flex items-start gap-2"><span class="text-cyan-500 font-black">•</span><span>Una vez que sepas la respuesta, presiona <strong class="text-slate-900">Ver respuesta</strong> y revisa si acertaste.</span></li>
+                                </ul>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row gap-4 items-center justify-between border-t border-cyan-100 pt-6">
+                                <div class="w-full sm:w-auto flex-1 max-w-xs">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 block mb-1">Especialidad para el Desafío:</label>
+                                    <select onchange="state.diagSpecialty=this.value;" class="w-full px-4 py-2.5 bg-white border border-cyan-200 rounded-xl text-xs font-bold text-slate-800">
+                                        <option value="aleatorio" ${state.diagSpecialty === 'aleatorio' ? 'selected' : ''}>🎲 Tema Aleatorio de Medicina (Predeterminado)</option>
+                                        ${Object.entries(specialtyLabels).map(([k, label]) => `<option value="${k}" ${state.diagSpecialty === k ? 'selected' : ''}>${label}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <button onclick="startDiagMinutoChallenge(state.diagSpecialty)" class="w-full sm:w-auto px-8 py-3.5 bg-cyan-500 hover:bg-cyan-600 text-white font-black text-sm rounded-2xl shadow-lg shadow-cyan-200">Comenzar desafío 🚀</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (state.activeTab === "diag_minuto" && (state.diagState === "playing" || state.diagState === "revealed")) {
+                const c = state.diagCurrentCase || diagMinutoFallback[0];
+                const isRevealed = state.diagState === "revealed";
+
+                html += `
+                    <div class="flex flex-col gap-6 animate-fadeIn max-w-3xl mx-auto">
+                        <div class="flex items-center gap-4">
+                            <span id="timer-text" class="text-sm font-extrabold text-cyan-600 w-10 flex-shrink-0">${state.diagTimerLeft}s</span>
+                            <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                                <div id="timer-bar-fill" class="h-full bg-cyan-500 transition-all duration-1000" style="width: ${(state.diagTimerLeft / 60) * 100}%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-100/80 border border-slate-200 rounded-2xl p-6 text-center shadow-sm">
+                            <span class="text-[10px] font-black uppercase text-cyan-600 bg-cyan-50 px-2.5 py-1 rounded-full border border-cyan-100 inline-block mb-3">Area: ${specialtyLabels[c.specialty] || "Medicina General"}</span>
+                            <h3 class="text-base md:text-lg font-black text-slate-800 leading-snug">${c.mainPrompt}</h3>
+                        </div>
+
+                        <div class="flex flex-col gap-3">
+                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">PISTAS</span>
+                            ${[1,2,3,4,5].map(num => `
+                                <div class="flex items-center gap-3">
+                                    <button onclick="toggleClue(${num})" class="w-10 h-10 rounded-xl border flex items-center justify-center text-base flex-shrink-0 transition-all ${state.diagCluesRevealed[num] ? 'bg-emerald-50 border-emerald-300 text-emerald-600' : 'bg-white border-slate-200 text-slate-400'}">
+                                        ${state.diagCluesRevealed[num] ? '🙈' : '👁️'}
+                                    </button>
+                                    <div class="w-full p-3.5 rounded-xl border text-xs leading-relaxed transition-all ${state.diagCluesRevealed[num] ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950 font-medium' : 'bg-slate-100/70 border-slate-200 text-slate-500'}">
+                                        ${state.diagCluesRevealed[num] ? c.pistas[`pista${num}`] : `Pista ${num}: Hallazgos`}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        ${!isRevealed ? `
+                            <div class="flex flex-col items-center gap-3 mt-4">
+                                <button onclick="revealDiagAnswer()" class="w-full max-w-md py-3.5 bg-cyan-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-cyan-100 text-center">Ver respuesta</button>
+                                <button onclick="startDiagMinutoChallenge(state.diagSpecialty)" class="text-xs font-bold text-slate-500 hover:underline">Saltar</button>
+                            </div>
+                        ` : `
+                            <div class="flex flex-col items-center gap-5 mt-4 animate-fadeIn">
+                                <div class="w-full p-5 bg-white border-2 border-cyan-400 rounded-3xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div>
+                                        <span class="text-[10px] font-extrabold uppercase text-cyan-600 tracking-wider block">RESPUESTA CORRECTA</span>
+                                        <h4 class="text-xl font-black text-slate-900 mt-1">${c.correctDiagnosis}</h4>
+                                    </div>
+                                    <button onclick="state.showKeyInfoModal=true; render();" class="px-5 py-2.5 bg-cyan-500 text-white font-bold rounded-2xl text-xs flex items-center gap-2 shadow-md"><span>ℹ️</span><span>Información clave</span></button>
+                                </div>
+
+                                <div class="flex flex-col items-center gap-3 w-full max-w-md">
+                                    <span class="text-xs font-black text-slate-700">¿La sabías?</span>
+                                    <div class="grid grid-cols-2 gap-4 w-full">
+                                        <button onclick="handleDiagUserSelfEval(false)" class="py-3 px-4 bg-white border-2 border-rose-500 text-rose-600 font-extrabold text-xs rounded-2xl">No la sabía</button>
+                                        <button onclick="handleDiagUserSelfEval(true)" class="py-3 px-4 bg-emerald-600 text-white font-extrabold text-xs rounded-2xl shadow-lg">Sí, la sabía (+10 XP)</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }
+
+            // TAB: MEDIPALABRA (ROSCO PASAPALABRA EUNACOM)
+            if (state.activeTab === "medipalabra") {
+                const totalRosco = state.roscoItems.length;
+                const correctCount = state.roscoItems.filter(i => i.status === "correct").length;
+
+                if (state.roscoState === "intro") {
+                    html += `
+                        <div class="flex flex-col gap-6 animate-fadeIn max-w-4xl mx-auto">
+                            <div class="bg-gradient-to-r from-indigo-900 via-indigo-800 to-blue-900 text-white rounded-3xl p-6 md:p-8 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                                <div>
+                                    <span class="bg-indigo-500/30 text-indigo-200 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider inline-block mb-2">Entrenamiento de Memorización Activa</span>
+                                    <h2 class="text-2xl font-black">MediPalabra - El Rosco EUNACOM</h2>
+                                    <p class="text-xs text-indigo-200 mt-1 max-w-xl leading-relaxed">Pon a prueba tu vocabulario médico y velocidad conceptual con el mítico formato "Pasapalabra". Selecciona entre 4 alternativas por letra.</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm flex flex-col gap-6">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div>
+                                        <h3 class="text-lg font-black text-slate-900">Configuración del Rosco</h3>
+                                    </div>
+                                    <div class="w-full md:w-auto flex items-center gap-3">
+                                        <select onchange="state.roscoSpecialtyFilter=this.value;" class="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+                                            <option value="todas">Todas las Especialidades</option>
+                                            ${Object.entries(specialtyLabels).map(([k, label]) => `<option value="${k}" ${state.roscoSpecialtyFilter === k ? 'selected' : ''}>${label}</option>`).join('')}
+                                        </select>
+                                        <button onclick="initRoscoGame(state.roscoSpecialtyFilter)" class="px-6 py-2.5 bg-indigo-600 text-white font-black text-xs rounded-xl shadow-lg">Iniciar Rosco 🚀</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (state.roscoState === "playing") {
+                    const currentItem = state.roscoItems[state.roscoCurrentIdx];
+
+                    html += `
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center animate-fadeIn max-w-6xl mx-auto">
+                            <div class="lg:col-span-5 flex flex-col items-center justify-center">
+                                <div class="relative w-80 h-80 md:w-96 md:h-96">
+                                    <svg viewBox="0 0 350 350" class="w-full h-full">
+                                        <circle cx="175" cy="175" r="110" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+                                        <text x="175" y="150" text-anchor="middle" font-size="12" font-weight="800" fill="#64748b">ROSCO EUNACOM</text>
+                                        <text x="175" y="180" text-anchor="middle" font-size="32" font-weight="900" fill="#0284c7">${currentItem ? currentItem.letter : 'A'}</text>
+                                        <text x="175" y="205" text-anchor="middle" font-size="11" font-weight="700" fill="#10b981">${correctCount} Aciertos</text>
+
+                                        ${state.roscoItems.map((item, idx) => {
+                                            const coords = getRoscoCoords(idx, totalRosco);
+                                            const isCurrent = idx === state.roscoCurrentIdx;
+                                            
+                                            let fillColor = "#cbd5e1";
+                                            let textColor = "#334155";
+
+                                            if (item.status === "correct") { fillColor = "#10b981"; textColor = "#ffffff"; }
+                                            else if (item.status === "wrong") { fillColor = "#f43f5e"; textColor = "#ffffff"; }
+                                            else if (item.status === "skipped") { fillColor = "#f59e0b"; textColor = "#ffffff"; }
+                                            else if (isCurrent) { fillColor = "#06b6d4"; textColor = "#ffffff"; }
+
+                                            return `
+                                                <g class="transition-all duration-300 cursor-pointer" onclick="state.roscoCurrentIdx=${idx}; render();">
+                                                    <circle cx="${coords.x}" cy="${coords.y}" r="${isCurrent ? 18 : 15}" fill="${fillColor}" stroke="${isCurrent ? '#0891b2' : '#ffffff'}" stroke-width="${isCurrent ? 3 : 2}" class="${isCurrent ? 'animate-pulse' : ''}" />
+                                                    <text x="${coords.x}" y="${coords.y + 4}" text-anchor="middle" font-size="${isCurrent ? 14 : 12}" font-weight="900" fill="${textColor}">${item.letter}</text>
+                                                </g>
+                                            `;
+                                        }).join('')}
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div class="lg:col-span-7 flex flex-col gap-6">
+                                <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-md flex flex-col gap-6">
+                                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                                        <span class="bg-indigo-50 text-indigo-700 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">${currentItem ? currentItem.type : ''}</span>
+                                        <button onclick="state.roscoState='intro'; render();" class="text-xs font-bold text-slate-400">❌ Salir</button>
+                                    </div>
+
+                                    <div class="bg-slate-50 border border-slate-100 p-5 rounded-2xl">
+                                        <p class="text-base font-bold text-slate-800 leading-relaxed">"${currentItem ? currentItem.prompt : ''}"</p>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        ${(currentItem ? currentItem.options : []).map((opt) => `
+                                            <button onclick="handleRoscoOptionSelect('${opt}')" class="p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 text-left font-extrabold text-sm text-slate-800 transition-all flex items-center justify-between group shadow-sm">
+                                                <span>${opt}</span>
+                                                <span class="text-slate-300 group-hover:text-indigo-600 transition-transform group-hover:translate-x-1">➡️</span>
+                                            </button>
+                                        `).join('')}
+                                    </div>
+
+                                    <button onclick="handleRoscoSkip()" class="w-full py-3.5 bg-amber-400 text-amber-950 font-black text-xs rounded-2xl shadow-md">🟡 PASAPALABRA (Saltar Letra)</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (state.roscoState === "summary") {
+                    html += `
+                        <div class="flex flex-col gap-8 animate-fadeIn max-w-4xl mx-auto">
+                            <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-xl text-center flex flex-col items-center gap-6">
+                                <div class="bg-indigo-50 text-indigo-600 p-4 rounded-full text-3xl">🏆</div>
+                                <h2 class="text-2xl font-black text-slate-900">¡Rosco Finalizado!</h2>
+                                <button onclick="initRoscoGame(state.roscoSpecialtyFilter)" class="px-8 py-3 bg-indigo-600 text-white font-extrabold text-xs rounded-2xl">Jugar Nuevo Rosco 🔄</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // SIMULATOR ACTIVE QUESTION / AUDIT
+            if (state.activeTab === "simulator" && state.view === "simulator") {
+                const q = state.questions[state.currentIdx];
+                const hasSelected = !!state.selectedAnswers[state.currentIdx];
+                const hasSubmitted = !!state.submitted[state.currentIdx];
+                const userSel = state.selectedAnswers[state.currentIdx];
+
+                html += `
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
+                        <div class="lg:col-span-7 flex flex-col gap-6">
+                            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100">
+                                <div class="flex justify-between items-center mb-6">
+                                    <span class="bg-blue-50 text-blue-700 text-xs font-extrabold px-3 py-1 rounded-full uppercase">Pregunta ${state.currentIdx + 1} de ${state.questions.length}</span>
+                                    <button onclick="stopDiagTimer(); state.view='dashboard'; render();" class="text-xs font-bold text-slate-400">❌ Volver al Panel</button>
+                                </div>
+
+                                <div class="bg-slate-50 border border-slate-100 p-5 rounded-2xl mb-6">
+                                    <span class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Área: ${specialtyLabels[state.selectedSpecialty] || q.area}</span>
+                                    <h3 class="text-base md:text-lg font-extrabold text-slate-900 leading-relaxed">${q.question}</h3>
+                                </div>
+
+                                <div class="flex flex-col gap-3">
+                                    ${q.options.map(opt => {
+                                        const isSel = userSel === opt.id;
+                                        const isCorr = opt.id === q.correctAnswer;
+                                        let cls = "border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-800";
+                                        let badgeCls = "bg-slate-100 text-slate-600";
+
+                                        if (isSel && !hasSubmitted) {
+                                            cls = "border-blue-500 bg-blue-50 text-blue-900 ring-2 ring-blue-500/20";
+                                            badgeCls = "bg-blue-600 text-white";
+                                        } else if (hasSubmitted) {
+                                            if (isCorr) {
+                                                cls = "border-emerald-500 bg-emerald-50 text-emerald-950 font-medium";
+                                                badgeCls = "bg-emerald-600 text-white";
+                                            } else if (isSel) {
+                                                cls = "border-rose-300 bg-rose-50 text-rose-950";
+                                                badgeCls = "bg-rose-600 text-white";
+                                            } else {
+                                                cls = "border-slate-100 bg-white text-slate-400 opacity-60 pointer-events-none";
+                                            }
+                                        }
+
+                                        return `
+                                            <button onclick="handleSelectOption('${opt.id}')" ${hasSubmitted ? 'disabled' : ''} class="flex items-start text-left p-4 rounded-2xl border-2 transition-all gap-4 ${cls}">
+                                                <span class="w-8 h-8 rounded-xl border flex items-center justify-center font-bold text-sm ${badgeCls}">${opt.id}</span>
+                                                <span class="text-sm md:text-base pt-0.5 leading-relaxed">${opt.text}</span>
+                                            </button>
+                                        `;
+                                    }).join('')}
+                                </div>
+
+                                <div class="flex justify-between items-center mt-8 pt-6 border-t border-slate-100">
+                                    <button onclick="handlePrev()" ${state.currentIdx === 0 ? 'disabled' : ''} class="px-4 py-2 text-sm font-bold text-slate-600 ${state.currentIdx === 0 ? 'opacity-30' : 'hover:bg-slate-100'}">◀️ Atrás</button>
+                                    ${!hasSubmitted ? `
+                                        <button onclick="handleSubmitAnswer()" ${!hasSelected ? 'disabled' : ''} class="px-6 py-3 text-sm font-bold rounded-2xl ${hasSelected ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}">Comprobar Conducta 🩺</button>
+                                    ` : `
+                                        <button onclick="handleNext()" class="px-6 py-3 text-sm font-bold bg-slate-900 text-white rounded-2xl hover:bg-slate-800 shadow-lg">${state.currentIdx < state.questions.length - 1 ? 'Siguiente Caso ➡️' : 'Finalizar Simulacro 🏆'}</button>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="lg:col-span-5">
+                            ${!hasSubmitted ? `
+                                <div class="bg-slate-100/70 border border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center text-center h-full min-h-[300px]">
+                                    <div class="bg-blue-50 text-blue-600 p-4 rounded-2xl mb-4">💡</div>
+                                    <h4 class="font-extrabold text-slate-800 text-lg">Panel de Auditoría de Error</h4>
+                                </div>
+                            ` : `
+                                <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col gap-5 animate-fadeIn">
+                                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                                        <span class="text-emerald-500 text-xl">🛡️</span>
+                                        <h4 class="font-extrabold text-slate-900 uppercase tracking-tight text-xs">Análisis Técnico EUNACOM</h4>
+                                    </div>
+                                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs">
+                                        <p class="font-extrabold text-blue-900 mb-1">Alternativa ${q.correctAnswer}:</p>
+                                        <p class="text-slate-600 leading-relaxed">${q.justification}</p>
+                                    </div>
+                                    <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4">
+                                        <p class="text-xs font-semibold whitespace-pre-line text-amber-950">${q.pearl}</p>
+                                    </div>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (state.activeTab === "simulator" && state.view === "finished") {
+                html += `
+                    <div class="max-w-xl mx-auto bg-white rounded-3xl p-8 shadow-lg border border-slate-100 text-center flex flex-col items-center gap-6 animate-fadeIn my-12">
+                        <div class="bg-blue-50 text-blue-600 p-5 rounded-full text-3xl">🏆</div>
+                        <h2 class="text-2xl font-black text-slate-900">¡Desafío Finalizado!</h2>
+                        <p class="text-xs text-slate-500">Se han acreditado tus puntos de experiencia en tu perfil.</p>
+                        <button onclick="stopDiagTimer(); state.view='dashboard'; render();" class="w-full py-4 bg-slate-950 text-white font-bold rounded-2xl">Volver al Dashboard Principal</button>
+                    </div>
+                `;
+            }
+
+            app.innerHTML = html;
+
+            if (state.activeTab === "diag_minuto" && state.diagState === "playing") {
+                updateTimerUI();
+            }
+        }
+
+        // Renderizado inicial
+        render();
+    </script>
+</body>
+</html>
